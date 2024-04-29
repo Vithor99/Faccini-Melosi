@@ -1,0 +1,12 @@
+Before running add the follwoing folders to stor pngs:
+Decomp_BenchmarkModel
+Decomp_OptimalTR
+Decomp_RamseyModel
+IRFs_BenchmarkModel
+IRFs_fast
+IRFs_OptimalTR
+IRFs_RamseyModel
+IRFs_slow
+Loss_BenchmarkModel
+Loss_OptimalTR
+Loss_RamseyModel

@@ -69,6 +69,8 @@ y_b %productivity of bad match
 b %Unemployment benefit 
 zeta %Calvo parameter
 eta %elasticity of substitution for consumption
+xi %work effort elasticity
+sigma %intertemporal elasticity of consumption
 
 %steady state variables 
 mu_ss
@@ -135,6 +137,8 @@ y_b = 1; %productivity of bad match
 zeta = 0.925; %Calvo parameter (portion of firms that don't reset their prices)            
 eta = 6; %elasticity of substitution for consumption                                        
 b = 0.8082; %unemployment benefit / Utility of leisure 
+xi = 1.5; %intertemporal work effort elasticity (from MPV) 1.37
+sigma = 0.33; %intertemporal consumption elasticity 
 
 %% steady state
 mu_ss= 1;
@@ -145,19 +149,19 @@ r_ss = log(1/beta);
 varphi_ss = (eta-1)/eta;
 W_ss = varphi_ss/(1-beta*(1-delta));
 
-v_ss = vacancy_finder(delta, s, phi_0, psi, beta, k, xi_g, xi_b, y_g, y_b, b, W_ss); 
-u_ss = unemp_finder(delta, s, phi_0, psi, beta, k, xi_g, xi_b, y_g, y_b, b, W_ss); 
+v_ss = vacancy_finder(delta, s, phi_0, psi, beta, k, xi_g, xi_b, y_g, y_b, b, W_ss, eta, xi, sigma); 
+u_ss = unemp_finder(delta, s, phi_0, psi, beta, k, xi_g, xi_b, y_g, y_b, b, W_ss, eta, xi, sigma); 
 
 teta_ss = (v_ss/(u_ss+s*(1-u_ss)));  % Example equation for variable x
 phi_cap_ss = (phi_0 * ((v_ss/(u_ss+s*(1-u_ss)))^psi));  % Example equation for variable y
 omega_ss = phi_cap_ss / teta_ss; 
-l_b_ss = ((phi_cap_ss * xi_b * u_ss * (1-delta)) / (delta  + (1-delta) * phi_cap_ss * xi_g * s ));
+l_b_ss =((phi_cap_ss*xi_b*u_ss)/(s*phi_cap_ss*xi_g - delta));
 l_g_ss = 1 -( u_ss + l_b_ss); 
-Q_ss = (1/(1-delta)) * (y_g * l_g_ss + y_b * l_b_ss);
+Q_ss = ((varphi_ss^(xi-1))*(y_g^xi * (l_g_ss/(1-delta)) + y_b^xi * (l_b_ss/(1-delta))))^(1/(1-sigma*(1-xi)));
 C_ss = Q_ss; 
 s_g_ss = y_g * W_ss - (b*C_ss/(1-beta*(1-delta)));
 s_b_ss = y_b * W_ss - (b*C_ss/(1-beta*(1-delta)));
-lambda_ss = (mu_ss/C_ss);
+lambda_ss = (C_ss)^(-sigma);
 
 %auxilary variables
 EE_ss= (s*phi_cap_ss*(l_b_ss*(xi_g)))/(l_g_ss+l_b_ss);
@@ -229,30 +233,29 @@ u_hat = (1-delta)*(u_hat(-1)*(1-phi_cap_ss)-phi_cap_ss*phi_cap_hat(-1));
 phi_cap_hat = psi*teta_hat;
 
 %lambda = mu/C;                                                             %MU of consumption
-lambda_hat = mu_hat - C_hat; 
+lambda_hat = mu_hat - sigma*C_hat; 
 
 %log(lambda) = log(lambda(+1)) - log(1/beta) + r - pi(+1);                  %log linear Euler 
 lambda_hat(+1)-lambda_hat+r_hat-pi(+1)=0; 
 
-%pi = kappa*(varphi_hat - z_hat) + beta * pi(+1) + pm_hat;                   %NKPC in logs
+pi = kappa*(varphi_hat - z_hat) + beta * pi(+1) + pm_hat;                   %NKPC in logs
 
 %omega = phi_cap/teta;                                                      %vacancy filling rate
 omega_hat = phi_cap_hat - teta_hat;
 
 %(k/omega) = (u/(u+s*(1-u))) *(xi_b * s_b + xi_g * s_g) + ((s*(1-u))/(u+s*(1-u))) * (xi_g * (l_b/(1-u))*(s_g - s_b)); %free entry condition
-%u_hat*u_ss*(xi_g*s_g_ss+xi_b*s_b_ss-(k/omega_ss)*(1-s)) + s_g_hat*s_g_ss*xi_g*(u_ss+s*l_b_ss) + s_b_hat*s_b_ss*(u_ss*xi_b-s*xi_g*l_b_ss) + l_b_hat*l_b_ss*xi_g*s*(s_g_ss-s_b_ss) + omega_hat*(k/omega_ss)*(u_ss*(1-s)+s) = 0; %log linear original
-varphi_hat = A_u*u_hat + A_m*mismatch_hat + A_omega * omega_hat + A_lambda * lambda_hat + A_e*(lambda_hat(+1)+W_hat(+1));
+u_hat*u_ss*(xi_g*s_g_ss+xi_b*s_b_ss-(k/omega_ss)*(1-s)) + s_g_hat*s_g_ss*xi_g*(u_ss+s*l_b_ss) + s_b_hat*s_b_ss*(u_ss*xi_b-s*xi_g*l_b_ss) + l_b_hat*l_b_ss*xi_g*s*(s_g_ss-s_b_ss) + omega_hat*(k/omega_ss)*(u_ss*(1-s)+s) = 0; %log linear original
 
-pi = A_u*u_hat + A_m*mismatch_hat + A_omega * omega_hat + A_lambda * lambda_hat + A_e*(lambda_hat(+1)+W_hat(+1))+beta * pi(+1) + pm_hat - kappa*z_hat;
+%W_ss*W_hat*((y_g^xi)*xi_g*(u_ss+s*l_b_ss)+(y_b^xi)*(u_ss*xi_b-s*xi_g*l_b_ss)) = - lambda_hat*(b *(lambda_ss^-1)/(1- beta*(1-delta)))*(xi_g*(u_ss+s*l_b_ss)+(u_ss*xi_b-s*xi_g*l_b_ss)) - u_hat*u_ss*(xi_g*s_g_ss+xi_b*s_b_ss-(k/omega_ss)*(1-s)) - l_b_hat*l_b_ss*xi_g*s*(s_g_ss-s_b_ss) - omega_hat*(k/omega_ss)*(u_ss*(1-s)+s)
 
-%s_b = y_b * W - (b *(lambda^-1) / (1- beta*(1-delta)));                    %Surplus function from bad match 
-s_b_ss*s_b_hat=y_b*W_ss*W_hat+ (b *(lambda_ss^-1) / (1- beta*(1-delta)))*lambda_hat;
+% new: s_b = (y_b^xi)*W - (b *(lambda^-1) / (1- beta*(1-delta)))            Surplus function from bad match 
+s_b_ss*s_b_hat=(y_b^xi)*W_ss*W_hat+ (b *(lambda_ss^-1) / (1- beta*(1-delta)))*lambda_hat;
 
-%s_g = y_g * W - (b *(lambda^-1) / (1- beta*(1-delta)));                    %Surplus function from good match 
-s_g_ss*s_g_hat=y_g*W_ss*W_hat+ (b *(lambda_ss^-1) / (1- beta*(1-delta)))*lambda_hat;
+% new: s_g = (y_g^xi)*W - (b *(lambda^-1) / (1- beta*(1-delta)));          %Surplus function from good match 
+s_g_ss*s_g_hat=(y_g^xi)*W_ss*W_hat+ (b *(lambda_ss^-1) / (1- beta*(1-delta)))*lambda_hat;
 
-%W = varphi + beta*(1-delta)*(lambda(+1)/lambda)*W(+1);                     %Stream of real Marginal revenues 
-W_ss*W_hat = varphi_hat*varphi_ss + beta*(1-delta)*W_ss*(lambda_hat(+1)-lambda_hat+W_hat(+1));
+%W = (1/xi)*(varphi^xi)*(lambda^(xi-1))  + beta*(1-delta)*(lambda(+1)/lambda)*W(+1)                 %Stream of real Marginal revenues 
+W_ss*W_hat = ((1/xi)*(varphi_ss^xi)*(lambda_ss^(xi-1)))*(xi*varphi_hat+ (xi-1)*lambda_hat) + beta*(1-delta)*W_ss*(lambda_hat(+1)-lambda_hat+W_hat(+1));
 
 %l_b = (1-delta)*((1- s*phi_cap(-1) * xi_g)*l_b(-1) + phi_cap(-1) * xi_b * u(-1));      %low of motion for bad matches 
 l_b_ss*l_b_hat=(1-delta)*l_b_ss*l_b_hat(-1)*(1-s*phi_cap_ss*xi_g)+(1-delta)*phi_cap_ss*phi_cap_hat(-1)*(xi_b*u_ss-l_b_ss*s*xi_g)+(1-delta)*phi_cap_ss*xi_b*u_ss*u_hat(-1);
@@ -260,8 +263,8 @@ l_b_ss*l_b_hat=(1-delta)*l_b_ss*l_b_hat(-1)*(1-s*phi_cap_ss*xi_g)+(1-delta)*phi_
 %l_g = 1 -(u + l_b);
 l_g_ss*l_g_hat = -u_ss*u_hat-l_b_ss*l_b_hat; 
 
-%Q/z = y_g * (l_g(+1)/(1-delta)) + y_b * (l_b(+1)/(1-delta));               %Production function
-Q_ss*(Q_hat-z_hat)=(y_g/(1-delta))*l_g_ss*l_g_hat(+1)+(y_b/(1-delta))*l_b_ss*l_b_hat(+1);
+%Q = z*((lambda*varphi)^(xi-1))*(y_g^xi * (l_g(+1)/(1-delta)) + y_b^xi * (l_b(+1)/(1-delta)));               %Production function
+Q_ss*(Q_hat-z_hat)=((y_g^xi)/(1-delta))*((lambda_ss*varphi_ss)^(xi-1))*l_g_ss*(l_g_hat(+1)+(xi-1)*(lambda_hat+varphi_hat))+((y_b^xi)/(1-delta))*((lambda_ss*varphi_ss)^(xi-1))*l_b_ss*(l_b_hat(+1)+(xi-1)*(lambda_hat+varphi_hat));
 
 %C = Q;                                                                     %Market clearing 
 C_ss*C_hat = Q_ss*Q_hat;
@@ -323,3 +326,5 @@ stoch_simul(order = 1
     ,irf=0
     ,periods= 10000 
     ,irf_plot_threshold=0) u_hat Q_hat pi EE_hat AC_hat mismatch_hat varphi_hat pm_hat z_hat r_hat omega_hat l_b_hat lambda_hat W_hat v_hat teta_hat;
+
+
